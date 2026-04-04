@@ -35,7 +35,7 @@ export function ControlRoomPage() {
         </div>
       </div>
 
-      <div className="animate-fade-up-1 grid grid-cols-[1fr_380px] gap-4 items-start">
+      <div className="animate-fade-up-1 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 items-start">
         {/* Stream Preview */}
         <div className="flex flex-col gap-3">
           <DashboardCard className="overflow-hidden">
