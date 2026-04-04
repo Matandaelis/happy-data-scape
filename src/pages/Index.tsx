@@ -36,13 +36,19 @@ function PageRouter({ active, setActive }: { active: string; setActive: (k: stri
 
 const Index = () => {
   const [active, setActive] = useState("overview");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
-      <DashboardSidebar active={active} setActive={setActive} />
-      <TopBar onNavigate={setActive} />
-      <main className="ml-[228px] pt-14 min-h-screen">
-        <div className="max-w-[860px] mx-auto py-7 px-8">
+      <DashboardSidebar
+        active={active}
+        setActive={setActive}
+        mobileOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+      <TopBar onNavigate={setActive} onMenuToggle={() => setSidebarOpen((p) => !p)} />
+      <main className="lg:ml-[228px] pt-14 min-h-screen">
+        <div className="max-w-[860px] mx-auto py-5 px-4 sm:py-7 sm:px-8">
           <PageRouter active={active} setActive={setActive} />
         </div>
       </main>
