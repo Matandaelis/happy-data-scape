@@ -1,16 +1,53 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { TopBar } from "@/components/dashboard/TopBar";
+import { OverviewPage } from "@/components/pages/OverviewPage";
+import { ShowsPage } from "@/components/pages/ShowsPage";
+import { VideosPage } from "@/components/pages/VideosPage";
+import { ControlRoomPage } from "@/components/pages/ControlRoomPage";
+import {
+  PlaylistsPage,
+  HostsPage,
+  SettingsStorePage,
+  SettingsBrandingPage,
+  SettingsNotifsPage,
+  SimulcastPage,
+  IntegrationsPage,
+  HelpPage,
+} from "@/components/pages/OtherPages";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+function PageRouter({ active, setActive }: { active: string; setActive: (k: string) => void }) {
+  const pages: Record<string, React.ReactNode> = {
+    overview: <OverviewPage onNavigate={setActive} />,
+    shows: <ShowsPage onControlRoom={() => setActive("control-room")} />,
+    videos: <VideosPage />,
+    playlists: <PlaylistsPage />,
+    hosts: <HostsPage />,
+    "settings-store": <SettingsStorePage />,
+    "settings-branding": <SettingsBrandingPage />,
+    "settings-notifs": <SettingsNotifsPage />,
+    simulcast: <SimulcastPage />,
+    integrations: <IntegrationsPage />,
+    help: <HelpPage />,
+    "control-room": <ControlRoomPage />,
+  };
+  return <>{pages[active] || <OverviewPage onNavigate={setActive} />}</>;
+}
+
+const Index = () => {
+  const [active, setActive] = useState("overview");
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen bg-background">
+      <DashboardSidebar active={active} setActive={setActive} />
+      <TopBar onNavigate={setActive} />
+      <main className="ml-[228px] pt-14 min-h-screen">
+        <div className="max-w-[860px] mx-auto py-7 px-8">
+          <PageRouter active={active} setActive={setActive} />
+        </div>
+      </main>
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
