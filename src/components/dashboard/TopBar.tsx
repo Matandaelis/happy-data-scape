@@ -2,21 +2,29 @@ import { useState } from "react";
 import { DashboardIcon } from "./DashboardIcon";
 import { DashboardBtn } from "./DashboardAtoms";
 
-export function TopBar({ onNavigate }: { onNavigate: (k: string) => void }) {
+export function TopBar({ onNavigate, onMenuToggle }: { onNavigate: (k: string) => void; onMenuToggle: () => void }) {
   const [cOpen, setCOpen] = useState(false);
   const [pOpen, setPOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 left-[228px] right-0 h-14 bg-card border-b border-border flex items-center justify-between px-6 z-[90]">
-      <div className="text-[11px] text-muted-foreground font-medium">
-        <span className="font-display font-bold text-foreground text-[12px]">22 Mar 2026 – 05 Apr 2026</span>
-        <span className="ml-1.5 bg-amber-100 text-amber-800 rounded px-[7px] py-[2px] text-[10px] font-bold tracking-[.04em]">IN TRIAL</span>
+    <header className="fixed top-0 left-0 lg:left-[228px] right-0 h-14 bg-card border-b border-border flex items-center justify-between px-4 lg:px-6 z-[90]">
+      <div className="flex items-center gap-3">
+        {/* Hamburger - mobile only */}
+        <button onClick={onMenuToggle} className="lg:hidden bg-transparent border-none cursor-pointer text-foreground p-1">
+          <DashboardIcon name="list" size={20} strokeWidth={2} />
+        </button>
+        <div className="text-[11px] text-muted-foreground font-medium hidden sm:block">
+          <span className="font-display font-bold text-foreground text-[12px]">22 Mar 2026 – 05 Apr 2026</span>
+          <span className="ml-1.5 bg-amber-100 text-amber-800 rounded px-[7px] py-[2px] text-[10px] font-bold tracking-[.04em]">IN TRIAL</span>
+        </div>
+        {/* Mobile: just logo text */}
+        <span className="sm:hidden font-display font-extrabold text-sm tracking-tight">LiveShop</span>
       </div>
       <div className="flex items-center gap-2">
         {/* Create dropdown */}
         <div className="relative">
           <DashboardBtn icon="plus" onClick={() => { setCOpen((p) => !p); setPOpen(false); }}>
-            Create <DashboardIcon name="chev_d" size={10} strokeWidth={2.5} />
+            <span className="hidden sm:inline">Create</span> <DashboardIcon name="chev_d" size={10} strokeWidth={2.5} />
           </DashboardBtn>
           {cOpen && (
             <div className="absolute top-[calc(100%+6px)] right-0 bg-card border border-border rounded-lg shadow-lg-custom min-w-[180px] overflow-hidden z-[200]">
@@ -32,8 +40,8 @@ export function TopBar({ onNavigate }: { onNavigate: (k: string) => void }) {
             </div>
           )}
         </div>
-        {/* Playlist dropdown */}
-        <div className="relative">
+        {/* Playlist dropdown - hidden on small mobile */}
+        <div className="relative hidden sm:block">
           <DashboardBtn variant="secondary" icon="plus" onClick={() => { setPOpen((p) => !p); setCOpen(false); }}>
             Playlist <DashboardIcon name="chev_d" size={10} strokeWidth={2.5} />
           </DashboardBtn>
@@ -56,8 +64,8 @@ export function TopBar({ onNavigate }: { onNavigate: (k: string) => void }) {
           <div className="w-[22px] h-[22px] rounded-full bg-gradient-to-br from-primary to-purple flex items-center justify-center">
             <span className="font-display font-extrabold text-[9px] text-card">EM</span>
           </div>
-          <span className="text-[12px] font-semibold">Elis</span>
-          <DashboardIcon name="chev_d" size={11} className="text-muted-foreground" strokeWidth={2} />
+          <span className="text-[12px] font-semibold hidden sm:inline">Elis</span>
+          <DashboardIcon name="chev_d" size={11} className="text-muted-foreground hidden sm:block" strokeWidth={2} />
         </div>
       </div>
     </header>
