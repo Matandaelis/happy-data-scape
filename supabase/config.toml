@@ -1,1 +1,4 @@
 project_id = "zxclbidbkhmrushmqqfq"
+
+[functions.media-mtx-auth]
+verify_jwt = false
