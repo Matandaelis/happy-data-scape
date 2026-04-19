@@ -62,13 +62,15 @@ const BTN_SIZES: Record<BtnSize, string> = {
   lg: "px-[22px] py-2.5 text-[13px]",
 };
 
-export function DashboardBtn({ children, variant = "primary", size = "md", icon, onClick, className = "" }: {
-  children?: ReactNode; variant?: BtnVariant; size?: BtnSize; icon?: IconName; onClick?: () => void; className?: string;
+export function DashboardBtn({ children, variant = "primary", size = "md", icon, onClick, className = "", type = "button", disabled = false }: {
+  children?: ReactNode; variant?: BtnVariant; size?: BtnSize; icon?: IconName; onClick?: () => void; className?: string; type?: "button" | "submit" | "reset"; disabled?: boolean;
 }) {
   return (
     <button
+      type={type}
+      disabled={disabled}
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 border-none cursor-pointer font-display font-bold rounded-md tracking-[.01em] whitespace-nowrap transition-all hover:opacity-90 active:scale-[.98] ${BTN_VARIANTS[variant]} ${BTN_SIZES[size]} ${className}`}
+      className={`inline-flex items-center gap-1.5 border-none cursor-pointer font-display font-bold rounded-md tracking-[.01em] whitespace-nowrap transition-all hover:opacity-90 active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed ${BTN_VARIANTS[variant]} ${BTN_SIZES[size]} ${className}`}
     >
       {icon && <DashboardIcon name={icon} size={13} strokeWidth={2.2} />}
       {children}
