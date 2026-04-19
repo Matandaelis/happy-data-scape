@@ -41,6 +41,121 @@ export type Database = {
         }
         Relationships: []
       }
+      stream_products: {
+        Row: {
+          created_at: string
+          currency: string | null
+          external_product_id: string | null
+          id: string
+          name: string
+          position: number
+          price: number | null
+          product_url: string | null
+          stream_id: string
+          thumbnail_url: string | null
+          timestamp_shown: string | null
+        }
+        Insert: {
+          created_at?: string
+          currency?: string | null
+          external_product_id?: string | null
+          id?: string
+          name: string
+          position?: number
+          price?: number | null
+          product_url?: string | null
+          stream_id: string
+          thumbnail_url?: string | null
+          timestamp_shown?: string | null
+        }
+        Update: {
+          created_at?: string
+          currency?: string | null
+          external_product_id?: string | null
+          id?: string
+          name?: string
+          position?: number
+          price?: number | null
+          product_url?: string | null
+          stream_id?: string
+          thumbnail_url?: string | null
+          timestamp_shown?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stream_products_stream_id_fkey"
+            columns: ["stream_id"]
+            isOneToOne: false
+            referencedRelation: "streams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      streams: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          end_time: string | null
+          id: string
+          media_mtx_path: string
+          recorded_url: string | null
+          simulcast_targets: Json
+          start_time: string | null
+          status: Database["public"]["Enums"]["stream_status"]
+          stream_key: string
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          viewer_count: number
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          media_mtx_path: string
+          recorded_url?: string | null
+          simulcast_targets?: Json
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["stream_status"]
+          stream_key?: string
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          viewer_count?: number
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          media_mtx_path?: string
+          recorded_url?: string | null
+          simulcast_targets?: Json
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["stream_status"]
+          stream_key?: string
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          viewer_count?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "streams_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           branding: Json
@@ -155,6 +270,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_streams: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
       has_workspace_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -172,6 +291,10 @@ export type Database = {
         Returns: boolean
       }
       slugify: { Args: { input: string }; Returns: string }
+      validate_stream_key: {
+        Args: { _path: string; _stream_key: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:
@@ -182,6 +305,7 @@ export type Database = {
         | "analyst"
         | "creator"
         | "viewer"
+      stream_status: "scheduled" | "live" | "ended" | "recording"
       tenant_plan: "starter" | "pro" | "enterprise"
     }
     CompositeTypes: {
@@ -319,6 +443,7 @@ export const Constants = {
         "creator",
         "viewer",
       ],
+      stream_status: ["scheduled", "live", "ended", "recording"],
       tenant_plan: ["starter", "pro", "enterprise"],
     },
   },
