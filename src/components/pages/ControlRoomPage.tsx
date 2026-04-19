@@ -2,16 +2,83 @@ import { useState, useRef } from "react";
 import { DashboardIcon } from "../dashboard/DashboardIcon";
 import { DashboardCard, DashboardBtn, LivePill } from "../dashboard/DashboardAtoms";
 import { MOCK_PRODUCTS, MOCK_CHAT } from "@/lib/dashboard-data";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+type ActiveStream = {
+  id: string;
+  title: string;
+  stream_key: string;
+  media_mtx_path: string;
+  status: string;
+};
+
+type StartResponse = {
+  stream: ActiveStream;
+  ingest: { rtmp_url: string; stream_key: string };
+  playback: { hls_url: string; webrtc_url: string };
+};
 
 export function ControlRoomPage() {
+  const { workspace } = useAuth();
   const [tab, setTab] = useState<"products" | "chat" | "settings">("products");
-  const [isLive, setIsLive] = useState(false);
   const [pinned, setPinned] = useState<typeof MOCK_PRODUCTS[0] | null>(null);
   const [chatMsg, setChatMsg] = useState("");
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   const [msgs, setMsgs] = useState(MOCK_CHAT);
+  const [showTitle, setShowTitle] = useState("Summer Flash Sale");
+  const [activeStream, setActiveStream] = useState<StartResponse | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [showCreds, setShowCreds] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
+
+  const isLive = activeStream?.stream.status === "live";
+
+  const goLive = async () => {
+    if (!workspace) {
+      toast.error("No active workspace");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke<StartResponse>("streams-start", {
+        body: { workspace_id: workspace.id, title: showTitle },
+      });
+      if (error) throw error;
+      if (!data) throw new Error("Empty response");
+      setActiveStream(data);
+      setShowCreds(true);
+      toast.success("Stream started — push to RTMP to go live");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to start stream");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const endShow = async () => {
+    if (!activeStream) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.functions.invoke("streams-end", {
+        body: { stream_id: activeStream.stream.id },
+      });
+      if (error) throw error;
+      setActiveStream(null);
+      toast.success("Stream ended");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to end stream");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copy = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied`);
+  };
 
   const sendMsg = () => {
     if (!chatMsg.trim()) return;
@@ -24,16 +91,46 @@ export function ControlRoomPage() {
     <div className="flex flex-col gap-5">
       <div className="animate-fade-up flex items-center gap-3 flex-wrap">
         <h1 className="font-display font-extrabold text-[22px] tracking-tight flex-1">
-          Control Room — <span className="text-muted-foreground font-medium">Summer Flash Sale</span>
+          Control Room — <span className="text-muted-foreground font-medium">{showTitle}</span>
         </h1>
         <div className="flex items-center gap-2.5">
           {isLive && <LivePill />}
-          {isLive && <span className="font-mono text-[12px] text-muted-foreground">00:14:32</span>}
-          <DashboardBtn variant={isLive ? "danger" : "live"} icon={isLive ? "x" : "signal"} onClick={() => setIsLive((p) => !p)}>
-            {isLive ? "End Show" : "Go Live"}
+          <DashboardBtn
+            variant={isLive ? "danger" : "live"}
+            icon={isLive ? "x" : "signal"}
+            onClick={isLive ? endShow : goLive}
+            disabled={busy || !workspace}
+          >
+            {busy ? "Working…" : isLive ? "End Show" : "Go Live"}
           </DashboardBtn>
         </div>
       </div>
+
+      {activeStream && showCreds && (
+        <DashboardCard className="animate-fade-up p-4 border-primary/30">
+          <div className="flex items-start gap-3">
+            <div className="flex-1 flex flex-col gap-2.5 min-w-0">
+              <p className="font-display font-extrabold text-[12px] uppercase tracking-[.05em] text-primary">RTMP Ingest</p>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] text-muted-foreground font-semibold">Server URL</label>
+                <div className="flex gap-1.5">
+                  <input readOnly value={activeStream.ingest.rtmp_url} className="flex-1 bg-muted border border-border rounded-md px-2.5 py-1.5 text-[11px] font-mono outline-none" />
+                  <DashboardBtn size="sm" variant="secondary" onClick={() => copy(activeStream.ingest.rtmp_url, "RTMP URL")}>Copy</DashboardBtn>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] text-muted-foreground font-semibold">Stream Key</label>
+                <div className="flex gap-1.5">
+                  <input readOnly type="password" value={activeStream.ingest.stream_key} className="flex-1 bg-muted border border-border rounded-md px-2.5 py-1.5 text-[11px] font-mono outline-none" />
+                  <DashboardBtn size="sm" variant="secondary" onClick={() => copy(activeStream.ingest.stream_key, "Stream key")}>Copy</DashboardBtn>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">Paste these into OBS / your encoder, then start streaming.</p>
+            </div>
+            <DashboardBtn size="sm" variant="secondary" icon="x" onClick={() => setShowCreds(false)} />
+          </div>
+        </DashboardCard>
+      )}
 
       <div className="animate-fade-up-1 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 items-start">
         {/* Stream Preview */}
@@ -45,11 +142,11 @@ export function ControlRoomPage() {
                   <div className="w-[60px] h-[60px] rounded-full bg-primary/20 border-2 border-primary/40 flex items-center justify-center">
                     <DashboardIcon name="cam" size={22} className="text-sky-300" strokeWidth={1.4} />
                   </div>
-                  <p className="font-display font-bold text-[13px] text-sidebar-foreground">Streaming…</p>
+                  <p className="font-display font-bold text-[13px] text-sidebar-foreground">Awaiting encoder…</p>
                   <div className="absolute top-3 left-3"><LivePill /></div>
                   <div className="absolute top-3 right-3 flex items-center gap-[5px] bg-black/50 rounded-full py-[3px] px-2.5">
                     <DashboardIcon name="users" size={11} className="text-card" strokeWidth={2} />
-                    <span className="text-[11px] text-card font-display font-bold">142</span>
+                    <span className="text-[11px] text-card font-display font-bold">0</span>
                   </div>
                 </div>
               ) : (
@@ -174,7 +271,7 @@ export function ControlRoomPage() {
             <div className="p-3.5 flex flex-col gap-3 overflow-y-auto">
               <div className="flex flex-col gap-[5px]">
                 <label className="text-[12px] font-semibold">Show Title</label>
-                <input defaultValue="Summer Flash Sale" className="w-full bg-muted border border-border rounded-md px-3 py-2 text-[13px] outline-none focus:border-primary" />
+                <input value={showTitle} onChange={(e) => setShowTitle(e.target.value)} className="w-full bg-muted border border-border rounded-md px-3 py-2 text-[13px] outline-none focus:border-primary" />
               </div>
               <div className="border-t border-border pt-3">
                 <p className="font-display font-bold text-[12px] text-muted-foreground uppercase tracking-[.05em] mb-2.5">Simulcast Destinations</p>
