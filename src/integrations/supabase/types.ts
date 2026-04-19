@@ -14,16 +14,175 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tenants: {
+        Row: {
+          branding: Json
+          created_at: string
+          id: string
+          media_mtx_pass: string | null
+          media_mtx_user: string | null
+          name: string
+          owner_id: string
+          plan: Database["public"]["Enums"]["tenant_plan"]
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          branding?: Json
+          created_at?: string
+          id?: string
+          media_mtx_pass?: string | null
+          media_mtx_user?: string | null
+          name: string
+          owner_id: string
+          plan?: Database["public"]["Enums"]["tenant_plan"]
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          branding?: Json
+          created_at?: string
+          id?: string
+          media_mtx_pass?: string | null
+          media_mtx_user?: string | null
+          name?: string
+          owner_id?: string
+          plan?: Database["public"]["Enums"]["tenant_plan"]
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      workspace_members: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          settings: Json
+          slug: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          settings?: Json
+          slug: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          settings?: Json
+          slug?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspaces_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_workspace_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+          _workspace_id: string
+        }
+        Returns: boolean
+      }
+      is_tenant_owner: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_workspace_member: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
+      slugify: { Args: { input: string }; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      app_role:
+        | "admin"
+        | "workspace_admin"
+        | "streamer"
+        | "moderator"
+        | "analyst"
+        | "creator"
+        | "viewer"
+      tenant_plan: "starter" | "pro" | "enterprise"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +309,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: [
+        "admin",
+        "workspace_admin",
+        "streamer",
+        "moderator",
+        "analyst",
+        "creator",
+        "viewer",
+      ],
+      tenant_plan: ["starter", "pro", "enterprise"],
+    },
   },
 } as const
