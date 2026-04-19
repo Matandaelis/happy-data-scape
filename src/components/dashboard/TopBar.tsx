@@ -19,9 +19,21 @@ export function TopBar({ onNavigate, onMenuToggle }: { onNavigate: (k: string) =
         <button onClick={onMenuToggle} className="lg:hidden bg-transparent border-none cursor-pointer text-foreground p-1">
           <DashboardIcon name="list" size={20} strokeWidth={2} />
         </button>
-        <div className="text-[11px] text-muted-foreground font-medium hidden sm:block">
-          <span className="font-display font-bold text-foreground text-[12px]">22 Mar 2026 – 05 Apr 2026</span>
-          <span className="ml-1.5 bg-amber-100 text-amber-800 rounded px-[7px] py-[2px] text-[10px] font-bold tracking-[.04em]">IN TRIAL</span>
+        <div className="relative hidden sm:block">
+          <button onClick={() => { setWsOpen((p) => !p); setUserOpen(false); }} className="flex items-center gap-1.5 bg-transparent border border-border rounded-md px-2.5 py-1 cursor-pointer">
+            <span className="font-display font-bold text-foreground text-[12px]">{workspace?.name || "No workspace"}</span>
+            <DashboardIcon name="chev_d" size={10} strokeWidth={2.5} className="text-muted-foreground" />
+          </button>
+          {wsOpen && workspaces.length > 0 && (
+            <div className="absolute top-[calc(100%+6px)] left-0 bg-card border border-border rounded-lg shadow-lg-custom min-w-[200px] overflow-hidden z-[200]">
+              {workspaces.map((w) => (
+                <button key={w.id} onClick={() => { setActiveWorkspace(w); setWsOpen(false); }}
+                  className={`block w-full text-left px-4 py-2 bg-transparent border-none cursor-pointer text-[13px] hover:bg-muted transition-colors ${w.id === workspace?.id ? "font-semibold text-primary" : "text-foreground"}`}>
+                  {w.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         {/* Mobile: just logo text */}
         <span className="sm:hidden font-display font-extrabold text-sm tracking-tight">LiveShop</span>
