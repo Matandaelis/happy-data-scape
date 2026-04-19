@@ -78,12 +78,26 @@ export function TopBar({ onNavigate, onMenuToggle }: { onNavigate: (k: string) =
           )}
         </div>
         {/* User */}
-        <div className="flex items-center gap-[7px] py-[5px] px-2.5 border border-border rounded-md cursor-pointer bg-card">
-          <div className="w-[22px] h-[22px] rounded-full bg-gradient-to-br from-primary to-purple flex items-center justify-center">
-            <span className="font-display font-extrabold text-[9px] text-card">EM</span>
-          </div>
-          <span className="text-[12px] font-semibold hidden sm:inline">Elis</span>
-          <DashboardIcon name="chev_d" size={11} className="text-muted-foreground hidden sm:block" strokeWidth={2} />
+        <div className="relative">
+          <button onClick={() => { setUserOpen((p) => !p); setWsOpen(false); setCOpen(false); setPOpen(false); }}
+            className="flex items-center gap-[7px] py-[5px] px-2.5 border border-border rounded-md cursor-pointer bg-card">
+            <div className="w-[22px] h-[22px] rounded-full bg-gradient-to-br from-primary to-purple flex items-center justify-center">
+              <span className="font-display font-extrabold text-[9px] text-card">{initials}</span>
+            </div>
+            <span className="text-[12px] font-semibold hidden sm:inline">{user?.user_metadata?.display_name || user?.email?.split("@")[0]}</span>
+            <DashboardIcon name="chev_d" size={11} className="text-muted-foreground hidden sm:block" strokeWidth={2} />
+          </button>
+          {userOpen && (
+            <div className="absolute top-[calc(100%+6px)] right-0 bg-card border border-border rounded-lg shadow-lg-custom min-w-[200px] overflow-hidden z-[200]">
+              <div className="px-4 py-2.5 border-b border-border">
+                <p className="text-[12px] font-semibold truncate">{user?.email}</p>
+              </div>
+              <button onClick={() => { setUserOpen(false); signOut(); }}
+                className="block w-full text-left px-4 py-2.5 bg-transparent border-none cursor-pointer text-[13px] text-foreground hover:bg-muted transition-colors">
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>
