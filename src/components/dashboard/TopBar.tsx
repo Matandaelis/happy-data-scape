@@ -1,8 +1,14 @@
 import { useState } from "react";
 import { DashboardIcon } from "./DashboardIcon";
 import { DashboardBtn } from "./DashboardAtoms";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function TopBar({ onNavigate, onMenuToggle }: { onNavigate: (k: string) => void; onMenuToggle: () => void }) {
+  const { user, workspace, workspaces, setActiveWorkspace, signOut } = useAuth();
+  const [wsOpen, setWsOpen] = useState(false);
+  const [userOpen, setUserOpen] = useState(false);
+  const initials = (user?.user_metadata?.display_name || user?.email || "U")
+    .split(/[\s@]+/).map((p: string) => p[0]).join("").slice(0, 2).toUpperCase();
   const [cOpen, setCOpen] = useState(false);
   const [pOpen, setPOpen] = useState(false);
 
