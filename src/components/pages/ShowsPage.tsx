@@ -1,29 +1,77 @@
-import { useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { DashboardIcon } from "../dashboard/DashboardIcon";
-import { DashboardCard, SectionHead, DashboardBtn, StatusPill, EmptyState, FieldRow, UploadZone, DashboardToggle } from "../dashboard/DashboardAtoms";
-import { MOCK_SHOWS, MOCK_PRODUCTS } from "@/lib/dashboard-data";
+import { DashboardCard, SectionHead, DashboardBtn, StatusPill, EmptyState, FieldRow } from "../dashboard/DashboardAtoms";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import type { Database } from "@/integrations/supabase/types";
+
+type Stream = Database["public"]["Tables"]["streams"]["Row"];
+type StreamStatus = Database["public"]["Enums"]["stream_status"];
 
 export function ShowsPage({ onControlRoom }: { onControlRoom: (id: string) => void }) {
-  const [view, setView] = useState<"list" | "create" | "analytics">("list");
-  const [filter, setFilter] = useState("all");
+  const { workspace } = useAuth();
+  const [view, setView] = useState<"list" | "form">("list");
+  const [editing, setEditing] = useState<Stream | null>(null);
+  const [filter, setFilter] = useState<"all" | StreamStatus>("all");
   const [search, setSearch] = useState("");
+  const [streams, setStreams] = useState<Stream[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  if (view === "create") return <ShowForm onBack={() => setView("list")} />;
-  if (view === "analytics") return <ShowAnalytics onBack={() => setView("list")} />;
+  const loadStreams = useCallback(async () => {
+    if (!workspace) return;
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("streams")
+      .select("*")
+      .eq("workspace_id", workspace.id)
+      .order("created_at", { ascending: false });
+    if (error) toast.error(error.message);
+    else setStreams(data || []);
+    setLoading(false);
+  }, [workspace]);
 
-  const filtered = MOCK_SHOWS.filter(
+  useEffect(() => { loadStreams(); }, [loadStreams]);
+
+  const handleDelete = async (id: string, title: string) => {
+    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+    const { error } = await supabase.from("streams").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Show deleted");
+    setStreams((s) => s.filter((x) => x.id !== id));
+  };
+
+  if (view === "form") {
+    return (
+      <ShowForm
+        workspaceId={workspace?.id}
+        existing={editing}
+        onBack={() => { setView("list"); setEditing(null); }}
+        onSaved={() => { setView("list"); setEditing(null); loadStreams(); }}
+      />
+    );
+  }
+
+  if (!workspace) {
+    return <DashboardCard className="p-10 text-center text-muted-foreground text-sm">Select a workspace to view shows.</DashboardCard>;
+  }
+
+  const filtered = streams.filter(
     (s) => (filter === "all" || s.status === filter) && s.title.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <div className="flex flex-col gap-5">
-      <SectionHead title="Live Shows" sub={`${MOCK_SHOWS.length} shows total`} action={<DashboardBtn icon="plus" onClick={() => setView("create")}>Create Live Show</DashboardBtn>} />
+      <SectionHead
+        title="Live Shows"
+        sub={loading ? "Loading…" : `${streams.length} show${streams.length === 1 ? "" : "s"} total`}
+        action={<DashboardBtn icon="plus" onClick={() => { setEditing(null); setView("form"); }}>Create Live Show</DashboardBtn>}
+      />
 
-      {/* Filters */}
       <DashboardCard className="p-3 px-4 animate-fade-up-1">
         <div className="flex items-center gap-2.5 flex-wrap">
           <div className="flex gap-1">
-            {["all", "live", "scheduled", "ended"].map((f) => (
+            {(["all", "live", "scheduled", "ended"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -42,15 +90,22 @@ export function ShowsPage({ onControlRoom }: { onControlRoom: (id: string) => vo
         </div>
       </DashboardCard>
 
-      {/* Table */}
       <DashboardCard className="overflow-hidden animate-fade-up-2">
-        {filtered.length === 0 ? (
-          <EmptyState icon="shows" title="No shows found" body="Try changing your filters or create a new show" cta="Create Live Show" onCta={() => setView("create")} />
+        {loading ? (
+          <div className="py-16 text-center text-muted-foreground text-sm">Loading shows…</div>
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            icon="shows"
+            title={streams.length === 0 ? "No shows yet" : "No shows match"}
+            body={streams.length === 0 ? "Create your first live show to get started" : "Try changing your filters"}
+            cta="Create Live Show"
+            onCta={() => { setEditing(null); setView("form"); }}
+          />
         ) : (
           <table className="w-full border-collapse">
             <thead>
               <tr>
-                {["Show", "Status", "Published", "Start Time", "Host", "Viewers", ""].map((h) => (
+                {["Show", "Status", "Start Time", "Viewers", ""].map((h) => (
                   <th key={h} className="text-left px-3.5 py-2.5 text-[11px] font-display font-bold text-muted-foreground uppercase tracking-[.05em] border-b border-border">{h}</th>
                 ))}
               </tr>
@@ -63,20 +118,23 @@ export function ShowsPage({ onControlRoom }: { onControlRoom: (id: string) => vo
                       <div className="w-9 h-9 rounded-md bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center shrink-0">
                         <DashboardIcon name="shows" size={14} className="text-primary" strokeWidth={1.6} />
                       </div>
-                      <span className="font-semibold">{show.title}</span>
+                      <div>
+                        <p className="font-semibold">{show.title}</p>
+                        {show.description && <p className="text-[11px] text-muted-foreground line-clamp-1 max-w-[260px]">{show.description}</p>}
+                      </div>
                     </div>
                   </td>
                   <td className="px-3.5 py-3"><StatusPill status={show.status} /></td>
-                  <td className="px-3.5 py-3"><StatusPill status={show.published ? "Published" : "Draft"} /></td>
-                  <td className="px-3.5 py-3 text-muted-foreground text-[12px]">{show.startTime}</td>
-                  <td className="px-3.5 py-3 text-[12px]">{show.host}</td>
-                  <td className="px-3.5 py-3 font-semibold">{show.viewers > 0 ? show.viewers.toLocaleString() : "—"}</td>
+                  <td className="px-3.5 py-3 text-muted-foreground text-[12px]">
+                    {show.start_time ? new Date(show.start_time).toLocaleString() : "—"}
+                  </td>
+                  <td className="px-3.5 py-3 font-semibold">{show.viewer_count > 0 ? show.viewer_count.toLocaleString() : "—"}</td>
                   <td className="px-3.5 py-3">
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 justify-end">
                       {show.status === "live" && <DashboardBtn size="sm" variant="live" onClick={() => onControlRoom(show.id)}>Control Room</DashboardBtn>}
-                      {show.status === "ended" && <DashboardBtn size="sm" variant="secondary" onClick={() => setView("analytics")}>Analytics</DashboardBtn>}
-                      <DashboardBtn size="sm" variant="ghost" icon="edit" onClick={() => setView("create")} />
-                      <DashboardBtn size="sm" variant="danger" icon="trash" />
+                      {show.status === "scheduled" && <DashboardBtn size="sm" variant="primary" onClick={() => onControlRoom(show.id)}>Open</DashboardBtn>}
+                      <DashboardBtn size="sm" variant="ghost" icon="edit" onClick={() => { setEditing(show); setView("form"); }} />
+                      <DashboardBtn size="sm" variant="danger" icon="trash" onClick={() => handleDelete(show.id, show.title)} />
                     </div>
                   </td>
                 </tr>
@@ -89,134 +147,134 @@ export function ShowsPage({ onControlRoom }: { onControlRoom: (id: string) => vo
   );
 }
 
-function ShowForm({ onBack }: { onBack: () => void }) {
-  const [priv, setPriv] = useState(false);
-  const [pass, setPass] = useState(false);
+function toLocalInput(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function ShowForm({ workspaceId, existing, onBack, onSaved }: {
+  workspaceId: string | undefined;
+  existing: Stream | null;
+  onBack: () => void;
+  onSaved: () => void;
+}) {
+  const { user } = useAuth();
+  const [title, setTitle] = useState(existing?.title ?? "");
+  const [description, setDescription] = useState(existing?.description ?? "");
+  const [startTime, setStartTime] = useState(toLocalInput(existing?.start_time ?? null));
+  const [endTime, setEndTime] = useState(toLocalInput(existing?.end_time ?? null));
+  const [status, setStatus] = useState<StreamStatus>(existing?.status ?? "scheduled");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!workspaceId || !user) return toast.error("No active workspace");
+    if (!title.trim()) return toast.error("Title is required");
+    setSaving(true);
+    try {
+      if (existing) {
+        const { error } = await supabase
+          .from("streams")
+          .update({
+            title: title.trim(),
+            description: description.trim() || null,
+            start_time: startTime ? new Date(startTime).toISOString() : null,
+            end_time: endTime ? new Date(endTime).toISOString() : null,
+            status,
+          })
+          .eq("id", existing.id);
+        if (error) throw error;
+        toast.success("Show updated");
+      } else {
+        const path = `live/${workspaceId}/${crypto.randomUUID()}`;
+        const { error } = await supabase.from("streams").insert({
+          workspace_id: workspaceId,
+          created_by: user.id,
+          title: title.trim(),
+          description: description.trim() || null,
+          start_time: startTime ? new Date(startTime).toISOString() : null,
+          end_time: endTime ? new Date(endTime).toISOString() : null,
+          status,
+          media_mtx_path: path,
+        });
+        if (error) throw error;
+        toast.success("Show created");
+      }
+      onSaved();
+    } catch (e: any) {
+      toast.error(e.message || "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-5">
       <div className="animate-fade-up flex items-center gap-3">
-        <button onClick={onBack} className="bg-transparent border-none cursor-pointer text-muted-foreground flex"><DashboardIcon name="chev_r" size={18} strokeWidth={2} className="rotate-180" /></button>
-        <h1 className="font-display font-extrabold text-[22px] tracking-tight">Create your Live Show</h1>
+        <button onClick={onBack} className="bg-transparent border-none cursor-pointer text-muted-foreground flex">
+          <DashboardIcon name="chev_r" size={18} strokeWidth={2} className="rotate-180" />
+        </button>
+        <h1 className="font-display font-extrabold text-[22px] tracking-tight">
+          {existing ? "Edit Live Show" : "Create your Live Show"}
+        </h1>
       </div>
 
       <DashboardCard className="p-[22px] animate-fade-up-1">
         <h2 className="font-display font-bold text-sm mb-[18px]">Basic Details</h2>
         <div className="flex flex-col gap-3.5">
-          <FieldRow label="Title" required><input placeholder="Enter title of the show here" className="w-full bg-muted border border-border rounded-md px-3 py-2.5 text-[13px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" /></FieldRow>
-          <FieldRow label="Description"><textarea placeholder="Enter description" className="w-full bg-muted border border-border rounded-md px-3 py-2.5 text-[13px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 resize-y min-h-[88px]" /></FieldRow>
-          <FieldRow label="Show Time" required>
+          <FieldRow label="Title" required>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter title of the show here"
+              className="w-full bg-muted border border-border rounded-md px-3 py-2.5 text-[13px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+          </FieldRow>
+          <FieldRow label="Description">
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Enter description"
+              className="w-full bg-muted border border-border rounded-md px-3 py-2.5 text-[13px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 resize-y min-h-[88px]"
+            />
+          </FieldRow>
+          <FieldRow label="Show Time">
             <div className="flex gap-2 items-center">
-              <input type="datetime-local" defaultValue="2026-03-22T21:03" className="flex-1 bg-muted border border-border rounded-md px-3 py-2 text-[13px] outline-none focus:border-primary" />
+              <input
+                type="datetime-local"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="flex-1 bg-muted border border-border rounded-md px-3 py-2 text-[13px] outline-none focus:border-primary"
+              />
               <span className="text-muted-foreground text-[13px]">→</span>
-              <input type="datetime-local" defaultValue="2026-03-22T22:03" className="flex-1 bg-muted border border-border rounded-md px-3 py-2 text-[13px] outline-none focus:border-primary" />
+              <input
+                type="datetime-local"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="flex-1 bg-muted border border-border rounded-md px-3 py-2 text-[13px] outline-none focus:border-primary"
+              />
             </div>
           </FieldRow>
-          <FieldRow label="Choose or Add a Host" required>
-            <input placeholder="Type Host name & select" className="w-full bg-muted border border-border rounded-md px-3 py-2.5 text-[13px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+          <FieldRow label="Status">
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as StreamStatus)}
+              className="w-full bg-muted border border-border rounded-md px-3 py-2.5 text-[13px] outline-none focus:border-primary"
+            >
+              <option value="scheduled">Scheduled</option>
+              <option value="live">Live</option>
+              <option value="ended">Ended</option>
+              <option value="recording">Recording</option>
+            </select>
           </FieldRow>
-          <div>
-            <div className="flex items-center justify-between py-3 border-b border-border">
-              <p className="text-[13px] font-medium">Make this Show Private</p>
-              <DashboardToggle on={priv} onToggle={() => setPriv((p) => !p)} />
-            </div>
-            <div className="flex items-center justify-between py-3">
-              <p className="text-[13px] font-medium">Make this Show Password Protected</p>
-              <DashboardToggle on={pass} onToggle={() => setPass((p) => !p)} />
-            </div>
-          </div>
         </div>
       </DashboardCard>
 
-      <DashboardCard className="p-[22px] animate-fade-up-2">
-        <div className="flex items-center justify-between mb-3.5">
-          <h2 className="font-display font-bold text-sm">Promote Products</h2>
-          <DashboardBtn size="sm" variant="ghost" icon="plus">Add Products</DashboardBtn>
-        </div>
-        <div className="flex flex-col gap-2">
-          {MOCK_PRODUCTS.slice(0, 2).map((p) => (
-            <div key={p.id} className="flex items-center gap-2.5 p-2.5 px-3 border border-border rounded-md bg-card hover:border-primary/50 transition-colors">
-              <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center text-base">{p.thumb}</div>
-              <div className="flex-1"><p className="text-[12px] font-semibold">{p.title}</p><p className="text-[11px] text-muted-foreground">KES {p.price.toLocaleString()}</p></div>
-              <DashboardBtn size="sm" variant="danger" icon="trash" />
-            </div>
-          ))}
-        </div>
-      </DashboardCard>
-
-      <DashboardCard className="p-[22px] animate-fade-up-3">
-        <h2 className="font-display font-bold text-sm mb-[18px]">Player Settings</h2>
-        <FieldRow label="Banner" required help="Recommended: 1280×720px">
-          <UploadZone height={100} hint="JPG, PNG — 1280×720 recommended" />
-        </FieldRow>
-      </DashboardCard>
-
-      <div className="animate-fade-up-4 flex justify-end gap-2.5">
-        <DashboardBtn variant="secondary" onClick={onBack}>Cancel</DashboardBtn>
-        <DashboardBtn variant="ghost">Save</DashboardBtn>
-        <DashboardBtn>Publish</DashboardBtn>
+      <div className="animate-fade-up-2 flex justify-end gap-2.5">
+        <DashboardBtn variant="secondary" onClick={onBack} disabled={saving}>Cancel</DashboardBtn>
+        <DashboardBtn onClick={save} disabled={saving}>{saving ? "Saving…" : existing ? "Save Changes" : "Create Show"}</DashboardBtn>
       </div>
-    </div>
-  );
-}
-
-function ShowAnalytics({ onBack }: { onBack: () => void }) {
-  const metrics = [
-    { label: "Total Viewers", live: 389, recorded: 142, color: "text-primary" },
-    { label: "Add to Cart", live: 47, recorded: 23, color: "text-purple" },
-    { label: "Engagement Rate", live: 66, recorded: 33, color: "text-success", pct: true },
-    { label: "Revenue (KES)", live: 87500, recorded: 34200, color: "text-warning" },
-  ];
-
-  return (
-    <div className="flex flex-col gap-5">
-      <div className="animate-fade-up flex items-center gap-3">
-        <button onClick={onBack} className="bg-transparent border-none cursor-pointer text-muted-foreground flex"><DashboardIcon name="chev_r" size={18} strokeWidth={2} className="rotate-180" /></button>
-        <div>
-          <h1 className="font-display font-extrabold text-[22px] tracking-tight">Electronics Week — Analytics</h1>
-          <p className="text-[12px] text-muted-foreground mt-0.5">Mar 18, 2026 · Ended</p>
-        </div>
-      </div>
-
-      <div className="animate-fade-up-1 grid grid-cols-2 gap-3">
-        {metrics.map((m, i) => (
-          <DashboardCard key={i} className="p-[18px_20px] hover:shadow-custom hover:-translate-y-px transition-all">
-            <p className="text-[11px] text-muted-foreground font-semibold tracking-[.04em] mb-3">{m.label.toUpperCase()}</p>
-            <div className="flex gap-4">
-              {[{ label: "Live", val: m.live }, { label: "Recorded", val: m.recorded }].map((side) => (
-                <div key={side.label}>
-                  <p className={`font-display font-extrabold text-[22px] tracking-tight ${m.color}`}>
-                    {m.pct ? `${side.val}%` : side.val.toLocaleString()}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground/50 font-medium mt-0.5">{side.label}</p>
-                </div>
-              ))}
-            </div>
-          </DashboardCard>
-        ))}
-      </div>
-
-      <DashboardCard className="p-5 animate-fade-up-2">
-        <h3 className="font-display font-bold text-sm mb-4">Engagement Breakdown</h3>
-        <div className="flex flex-col gap-3.5">
-          {[
-            { label: "Comments", live: 12, recorded: 8, color: "bg-primary" },
-            { label: "Reactions", live: 28, recorded: 15, color: "bg-purple" },
-            { label: "Add-to-cart", live: 47, recorded: 23, color: "bg-success" },
-            { label: "Purchases", live: 6, recorded: 4, color: "bg-warning" },
-          ].map((e, i) => (
-            <div key={i}>
-              <div className="flex justify-between mb-1">
-                <span className="text-[12px] font-semibold">{e.label}</span>
-                <span className="text-[12px] text-muted-foreground">Live: {e.live} · Recorded: {e.recorded}</span>
-              </div>
-              <div className="h-1.5 bg-border rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${e.color}`} style={{ width: `${(e.live / (e.live + e.recorded)) * 100}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </DashboardCard>
     </div>
   );
 }
