@@ -91,11 +91,16 @@ export function ControlRoomPage() {
     toast.success(`${label} copied`);
   };
 
-  const sendMsg = () => {
+  const sendMsg = async () => {
     if (!chatMsg.trim()) return;
-    setMsgs((p) => [...p, { id: Date.now(), user: "Host", msg: chatMsg, color: "#e0241e", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
+    if (!activeStream) {
+      toast.error("Start the stream to chat");
+      return;
+    }
+    const text = chatMsg;
     setChatMsg("");
-    setTimeout(() => chatRef.current?.scrollTo({ top: 99999, behavior: "smooth" }), 50);
+    const { error } = await sendMessage(text);
+    if (error) toast.error(error);
   };
 
   return (
@@ -157,7 +162,7 @@ export function ControlRoomPage() {
                   <div className="absolute top-3 left-3"><LivePill /></div>
                   <div className="absolute top-3 right-3 flex items-center gap-[5px] bg-black/50 rounded-full py-[3px] px-2.5">
                     <DashboardIcon name="users" size={11} className="text-card" strokeWidth={2} />
-                    <span className="text-[11px] text-card font-display font-bold">0</span>
+                    <span className="text-[11px] text-card font-display font-bold">{viewerCount}</span>
                   </div>
                 </div>
               ) : (
