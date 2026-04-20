@@ -190,8 +190,27 @@ export function ControlRoomPage() {
               <span className="text-[11px] text-muted-foreground font-display font-semibold">RTMP: MediaMTX</span>
             </div>
           </DashboardCard>
+        </div>
 
-          {pinned && (
+        {/* Action Panel */}
+        <DashboardCard className="overflow-hidden min-h-[500px]">
+          <div className="flex border-b border-border">
+            {(["products", "chat", "settings"] as const).map((t) => (
+              <button
+                key={t}
+                className={`flex-1 py-2.5 px-4 font-display font-bold text-[12px] capitalize border-b-2 bg-transparent border-x-0 border-t-0 cursor-pointer transition-colors ${
+                  tab === t ? "text-primary border-b-primary" : "text-muted-foreground border-b-transparent"
+                }`}
+                onClick={() => setTab(t)}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+
+          {tab === "products" && (
+            <StreamProductsManager streamId={activeStream?.stream.id ?? null} />
+          )}
             <DashboardCard className="p-3.5 px-4">
               <div className="flex items-center gap-2.5">
                 <span className="text-[11px] font-display font-extrabold text-live tracking-[.04em]">📌 PINNED</span>

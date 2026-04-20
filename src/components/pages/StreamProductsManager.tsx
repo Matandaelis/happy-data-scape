@@ -188,7 +188,7 @@ export function StreamProductsManager({ streamId }: { streamId: string | null })
               <img src={p.thumbnail_url} alt={p.name} className="w-9 h-9 rounded-md object-cover shrink-0" />
             ) : (
               <div className="w-9 h-9 rounded-md bg-muted flex items-center justify-center shrink-0">
-                <DashboardIcon name="cart" size={14} className="text-muted-foreground" strokeWidth={2} />
+                <DashboardIcon name="chart" size={14} className="text-muted-foreground" strokeWidth={2} />
               </div>
             )}
             <div className="flex-1 min-w-0">
