@@ -1,10 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { DashboardIcon } from "../dashboard/DashboardIcon";
 import { DashboardCard, DashboardBtn, LivePill } from "../dashboard/DashboardAtoms";
-import { MOCK_PRODUCTS, MOCK_CHAT } from "@/lib/dashboard-data";
+import { MOCK_PRODUCTS } from "@/lib/dashboard-data";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useStreamChat, colorForUser } from "@/hooks/useStreamChat";
 
 type ActiveStream = {
   id: string;
