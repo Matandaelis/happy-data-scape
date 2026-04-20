@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_messages: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          is_deleted: boolean
+          is_question: boolean
+          message: string
+          stream_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_deleted?: boolean
+          is_question?: boolean
+          message: string
+          stream_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_deleted?: boolean
+          is_question?: boolean
+          message?: string
+          stream_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_stream_id_fkey"
+            columns: ["stream_id"]
+            isOneToOne: false
+            referencedRelation: "streams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -271,6 +312,10 @@ export type Database = {
     }
     Functions: {
       can_manage_streams: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
+      can_moderate_chat: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }

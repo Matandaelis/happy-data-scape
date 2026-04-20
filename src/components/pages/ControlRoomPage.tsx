@@ -1,10 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { DashboardIcon } from "../dashboard/DashboardIcon";
 import { DashboardCard, DashboardBtn, LivePill } from "../dashboard/DashboardAtoms";
-import { MOCK_PRODUCTS, MOCK_CHAT } from "@/lib/dashboard-data";
+import { MOCK_PRODUCTS } from "@/lib/dashboard-data";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useStreamChat, colorForUser } from "@/hooks/useStreamChat";
 
 type ActiveStream = {
   id: string;
@@ -21,18 +22,28 @@ type StartResponse = {
 };
 
 export function ControlRoomPage() {
-  const { workspace } = useAuth();
+  const { workspace, user } = useAuth();
   const [tab, setTab] = useState<"products" | "chat" | "settings">("products");
   const [pinned, setPinned] = useState<typeof MOCK_PRODUCTS[0] | null>(null);
   const [chatMsg, setChatMsg] = useState("");
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
-  const [msgs, setMsgs] = useState(MOCK_CHAT);
   const [showTitle, setShowTitle] = useState("Summer Flash Sale");
   const [activeStream, setActiveStream] = useState<StartResponse | null>(null);
   const [busy, setBusy] = useState(false);
   const [showCreds, setShowCreds] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
+
+  const displayName = (user?.user_metadata as any)?.display_name ?? user?.email?.split("@")[0] ?? "Host";
+  const { messages, viewerCount, sendMessage, deleteMessage } = useStreamChat(
+    activeStream?.stream.id ?? null,
+    displayName,
+  );
+
+  useEffect(() => {
+    const t = setTimeout(() => chatRef.current?.scrollTo({ top: 99999, behavior: "smooth" }), 50);
+    return () => clearTimeout(t);
+  }, [messages.length]);
 
   const isLive = activeStream?.stream.status === "live";
 
@@ -80,11 +91,16 @@ export function ControlRoomPage() {
     toast.success(`${label} copied`);
   };
 
-  const sendMsg = () => {
+  const sendMsg = async () => {
     if (!chatMsg.trim()) return;
-    setMsgs((p) => [...p, { id: Date.now(), user: "Host", msg: chatMsg, color: "#e0241e", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
+    if (!activeStream) {
+      toast.error("Start the stream to chat");
+      return;
+    }
+    const text = chatMsg;
     setChatMsg("");
-    setTimeout(() => chatRef.current?.scrollTo({ top: 99999, behavior: "smooth" }), 50);
+    const { error } = await sendMessage(text);
+    if (error) toast.error(error);
   };
 
   return (
@@ -146,7 +162,7 @@ export function ControlRoomPage() {
                   <div className="absolute top-3 left-3"><LivePill /></div>
                   <div className="absolute top-3 right-3 flex items-center gap-[5px] bg-black/50 rounded-full py-[3px] px-2.5">
                     <DashboardIcon name="users" size={11} className="text-card" strokeWidth={2} />
-                    <span className="text-[11px] text-card font-display font-bold">0</span>
+                    <span className="text-[11px] text-card font-display font-bold">{viewerCount}</span>
                   </div>
                 </div>
               ) : (
@@ -240,24 +256,42 @@ export function ControlRoomPage() {
           {tab === "chat" && (
             <div className="flex flex-col h-[460px]">
               <div ref={chatRef} className="flex-1 overflow-y-auto p-3 flex flex-col gap-2.5">
-                {msgs.map((m) => (
-                  <div key={m.id} className="flex gap-2 items-start">
-                    <div className="w-[26px] h-[26px] rounded-full shrink-0 flex items-center justify-center font-display text-[9px] font-extrabold text-card" style={{ background: m.color }}>
-                      {m.user[0]}
+                {messages.length === 0 && (
+                  <p className="text-[11px] text-muted-foreground text-center mt-6">
+                    {activeStream ? "No messages yet — be the first to say hi 👋" : "Go live to start the chat"}
+                  </p>
+                )}
+                {messages.map((m) => {
+                  const color = colorForUser(m.user_id);
+                  const name = m.display_name || "Viewer";
+                  const time = new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                  return (
+                    <div key={m.id} className="flex gap-2 items-start group">
+                      <div className="w-[26px] h-[26px] rounded-full shrink-0 flex items-center justify-center font-display text-[9px] font-extrabold text-card" style={{ background: color }}>
+                        {name[0]?.toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-bold mb-0.5" style={{ color }}>{name} · {time}</p>
+                        <p className="text-[12px] bg-muted py-[5px] px-2.5 rounded-[0_8px_8px_8px] inline-block break-words">{m.message}</p>
+                      </div>
+                      <button
+                        onClick={() => deleteMessage(m.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity bg-transparent border-none cursor-pointer text-muted-foreground hover:text-destructive"
+                        title="Delete"
+                      >
+                        <DashboardIcon name="trash" size={11} strokeWidth={2} />
+                      </button>
                     </div>
-                    <div>
-                      <p className="text-[10px] font-bold mb-0.5" style={{ color: m.color }}>{m.user} · {m.time}</p>
-                      <p className="text-[12px] bg-muted py-[5px] px-2.5 rounded-[0_8px_8px_8px] inline-block">{m.msg}</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               <div className="p-2.5 px-3 border-t border-border flex gap-1.5">
                 <input
                   value={chatMsg}
                   onChange={(e) => setChatMsg(e.target.value)}
-                  placeholder="Reply as host…"
-                  className="flex-1 h-8 text-[12px] bg-muted border border-border rounded-md px-3 py-2 outline-none focus:border-primary"
+                  placeholder={activeStream ? "Reply as host…" : "Go live to chat"}
+                  disabled={!activeStream}
+                  className="flex-1 h-8 text-[12px] bg-muted border border-border rounded-md px-3 py-2 outline-none focus:border-primary disabled:opacity-50"
                   onKeyDown={(e) => e.key === "Enter" && sendMsg()}
                 />
                 <button onClick={sendMsg} className="w-8 h-8 bg-primary border-none rounded-md cursor-pointer flex items-center justify-center">
