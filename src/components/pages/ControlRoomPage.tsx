@@ -211,65 +211,6 @@ export function ControlRoomPage() {
           {tab === "products" && (
             <StreamProductsManager streamId={activeStream?.stream.id ?? null} />
           )}
-            <DashboardCard className="p-3.5 px-4">
-              <div className="flex items-center gap-2.5">
-                <span className="text-[11px] font-display font-extrabold text-live tracking-[.04em]">📌 PINNED</span>
-                <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center text-base">{pinned.thumb}</div>
-                <div className="flex-1">
-                  <p className="text-[12px] font-semibold">{pinned.title}</p>
-                  <p className="text-[11px] text-success font-bold">KES {pinned.price.toLocaleString()}</p>
-                </div>
-                <DashboardBtn size="sm" variant="secondary" onClick={() => setPinned(null)}>Unpin</DashboardBtn>
-              </div>
-            </DashboardCard>
-          )}
-        </div>
-
-        {/* Action Panel */}
-        <DashboardCard className="overflow-hidden min-h-[500px]">
-          <div className="flex border-b border-border">
-            {(["products", "chat", "settings"] as const).map((t) => (
-              <button
-                key={t}
-                className={`flex-1 py-2.5 px-4 font-display font-bold text-[12px] capitalize border-b-2 bg-transparent border-x-0 border-t-0 cursor-pointer transition-colors ${
-                  tab === t ? "text-primary border-b-primary" : "text-muted-foreground border-b-transparent"
-                }`}
-                onClick={() => setTab(t)}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-
-          {tab === "products" && (
-            <div className="flex flex-col" style={{ height: "calc(100% - 43px)" }}>
-              <div className="p-3">
-                <div className="relative">
-                  <DashboardIcon name="search" size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40" strokeWidth={2} />
-                  <input placeholder="Search products…" className="w-full pl-7 h-8 text-[12px] bg-muted border border-border rounded-md px-3 py-2 outline-none focus:border-primary" />
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto px-3 pb-3 flex flex-col gap-2">
-                {MOCK_PRODUCTS.map((p) => (
-                  <div key={p.id} className={`flex items-center gap-2.5 p-2.5 px-3 border border-border rounded-md bg-card ${!p.inStock ? "opacity-60" : ""}`}>
-                    <div className="w-9 h-9 rounded-md bg-muted flex items-center justify-center text-lg shrink-0">{p.thumb}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-semibold leading-tight">{p.title}</p>
-                      <p className="text-[11px] text-success font-bold">KES {p.price.toLocaleString()}</p>
-                      {!p.inStock && <span className="text-[9px] text-red-600 font-extrabold tracking-[.04em]">OUT OF STOCK</span>}
-                    </div>
-                    <DashboardBtn
-                      size="sm"
-                      variant={pinned?.id === p.id ? "secondary" : "primary"}
-                      onClick={() => setPinned(pinned?.id === p.id ? null : p)}
-                    >
-                      {pinned?.id === p.id ? "Unpin" : "Pin"}
-                    </DashboardBtn>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {tab === "chat" && (
             <div className="flex flex-col h-[460px]">
