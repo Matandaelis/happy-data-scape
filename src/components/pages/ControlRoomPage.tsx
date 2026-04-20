@@ -22,18 +22,28 @@ type StartResponse = {
 };
 
 export function ControlRoomPage() {
-  const { workspace } = useAuth();
+  const { workspace, user } = useAuth();
   const [tab, setTab] = useState<"products" | "chat" | "settings">("products");
   const [pinned, setPinned] = useState<typeof MOCK_PRODUCTS[0] | null>(null);
   const [chatMsg, setChatMsg] = useState("");
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
-  const [msgs, setMsgs] = useState(MOCK_CHAT);
   const [showTitle, setShowTitle] = useState("Summer Flash Sale");
   const [activeStream, setActiveStream] = useState<StartResponse | null>(null);
   const [busy, setBusy] = useState(false);
   const [showCreds, setShowCreds] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
+
+  const displayName = (user?.user_metadata as any)?.display_name ?? user?.email?.split("@")[0] ?? "Host";
+  const { messages, viewerCount, sendMessage, deleteMessage } = useStreamChat(
+    activeStream?.stream.id ?? null,
+    displayName,
+  );
+
+  useEffect(() => {
+    const t = setTimeout(() => chatRef.current?.scrollTo({ top: 99999, behavior: "smooth" }), 50);
+    return () => clearTimeout(t);
+  }, [messages.length]);
 
   const isLive = activeStream?.stream.status === "live";
 
