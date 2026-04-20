@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { DashboardIcon } from "../dashboard/DashboardIcon";
 import { DashboardCard, DashboardBtn, LivePill } from "../dashboard/DashboardAtoms";
-import { MOCK_PRODUCTS } from "@/lib/dashboard-data";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useStreamChat, colorForUser } from "@/hooks/useStreamChat";
+import { StreamProductsManager } from "./StreamProductsManager";
 
 type ActiveStream = {
   id: string;
@@ -24,7 +24,6 @@ type StartResponse = {
 export function ControlRoomPage() {
   const { workspace, user } = useAuth();
   const [tab, setTab] = useState<"products" | "chat" | "settings">("products");
-  const [pinned, setPinned] = useState<typeof MOCK_PRODUCTS[0] | null>(null);
   const [chatMsg, setChatMsg] = useState("");
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
