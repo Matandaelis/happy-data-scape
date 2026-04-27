@@ -82,6 +82,60 @@ export type Database = {
         }
         Relationships: []
       }
+      shoppable_videos: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          duration_seconds: number
+          id: string
+          original_url: string
+          processed_url: string | null
+          product_markers: Json
+          source_platform: string
+          status: string
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          views: number
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          duration_seconds?: number
+          id?: string
+          original_url: string
+          processed_url?: string | null
+          product_markers?: Json
+          source_platform?: string
+          status?: string
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          views?: number
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          duration_seconds?: number
+          id?: string
+          original_url?: string
+          processed_url?: string | null
+          product_markers?: Json
+          source_platform?: string
+          status?: string
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          views?: number
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       stream_products: {
         Row: {
           created_at: string
